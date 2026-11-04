@@ -1,7 +1,7 @@
 // Service worker: menyimpan semua berkas aplikasi supaya tetap jalan tanpa internet.
 // Bagian di antara penanda diisi otomatis oleh tools/stamp-sw.mjs. Jalankan `npm run stamp` sebelum rilis.
 // @stamp-start
-const VERSION = '06a2309096a2';
+const VERSION = 'a75d1fca752b';
 const ASSETS = [
   './',
   './css/app.css',
@@ -12,9 +12,13 @@ const ASSETS = [
   './icons/icon-maskable-512.png',
   './index.html',
   './js/agenda.js',
+  './js/cloud.js',
+  './js/config.js',
   './js/date.js',
+  './js/gcal.js',
   './js/ics.js',
   './js/main.js',
+  './js/merge.js',
   './js/prayer.js',
   './js/quickadd.js',
   './js/reminders.js',
@@ -22,6 +26,7 @@ const ASSETS = [
   './js/sky.js',
   './js/store.js',
   './js/themes.js',
+  './js/ui/akun.js',
   './js/ui/calendar.js',
   './js/ui/dom.js',
   './js/ui/fun.js',

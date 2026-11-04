@@ -1,0 +1,9 @@
+# Fungsi memeriksa sendiri token pengguna lewat /auth/v1/user.
+# google-callback dipanggil langsung oleh Google, jadi memang tidak membawa token Supabase.
+project_id = "istiqomah"
+
+[functions.google-api]
+verify_jwt = false
+
+[functions.google-callback]
+verify_jwt = false

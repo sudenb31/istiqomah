@@ -40,7 +40,7 @@ export function overdueTasks(state, today) {
 const byPriority = (a, b) => (b.task.priority ?? 0) - (a.task.priority ?? 0);
 
 // Isi garis waktu: sholat dan tugas berjam, urut kronologis. Tugas tanpa jam dipisah.
-export function dayAgenda(state, date) {
+export function dayAgenda(state, date, external = []) {
   const times = timesFor(state, date);
   const entries = dayTasks(state, date);
   const untimed = entries.filter((e) => e.minute == null).sort((a, b) => a.done - b.done || byPriority(a, b));
@@ -49,9 +49,11 @@ export function dayAgenda(state, date) {
     ? [...PRAYERS, 'terbit'].map((key) => ({ type: key === 'terbit' ? 'marker' : 'prayer', key, minute: times[key], name: PRAYER_NAMES[key] }))
     : [];
   // Sholat tampil lebih dulu kalau jamnya sama dengan tugas.
-  const rank = { prayer: 0, marker: 1, task: 2 };
-  const timeline = [...prayers, ...timed].sort((a, b) => a.minute - b.minute || rank[a.type] - rank[b.type]);
-  return { times, untimed, timeline };
+  const rank = { prayer: 0, marker: 1, event: 2, task: 3 };
+  const events = external.filter((e) => e.minute != null).map((e) => ({ type: 'event', ...e }));
+  const allDayEvents = external.filter((e) => e.minute == null);
+  const timeline = [...prayers, ...events, ...timed].sort((a, b) => a.minute - b.minute || rank[a.type] - rank[b.type]);
+  return { times, untimed, timeline, allDayEvents };
 }
 
 // Semua pengingat yang berbunyi di antara dua waktu (milidetik).

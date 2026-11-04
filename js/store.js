@@ -1,5 +1,6 @@
 // Satu dokumen state disimpan utuh di IndexedDB. Penulisannya atomik, jadi data tidak bisa setengah tersimpan.
 import { CITIES, PRAYERS } from './prayer.js';
+import { restoreAsNewest } from './merge.js';
 
 const DB_NAME = 'istiqomah';
 const STORE = 'kv';
@@ -28,6 +29,10 @@ export function defaultState() {
       { id: 'ibadah', name: 'Ibadah', emoji: '🌙', color: LIST_COLORS[2] },
     ],
     prayerLog: {},
+    prayerStamp: {},
+    deleted: {},
+    settingsAt: 0,
+    ownerId: null,
     settings: {
       location: { ...CITIES.find((c) => c.name === 'Jakarta') },
       locationConfirmed: false,
@@ -41,6 +46,7 @@ export function defaultState() {
       look: 'langit',
       bg: 'langit',
       nickname: '',
+      googlePrayers: true,
       lastReminderCheck: null,
     },
   };
@@ -54,6 +60,8 @@ function normalize(raw) {
     tasks: Array.isArray(raw.tasks) ? raw.tasks : [],
     lists: Array.isArray(raw.lists) && raw.lists.length ? raw.lists : d.lists,
     prayerLog: raw.prayerLog && typeof raw.prayerLog === 'object' ? raw.prayerLog : {},
+    prayerStamp: raw.prayerStamp && typeof raw.prayerStamp === 'object' ? raw.prayerStamp : {},
+    deleted: raw.deleted && typeof raw.deleted === 'object' ? raw.deleted : {},
     settings: {
       ...d.settings,
       ...raw.settings,
@@ -123,7 +131,7 @@ function persist() {
   }
 }
 
-const emit = () => listeners.forEach((fn) => fn(store.state));
+const emit = (meta) => listeners.forEach((fn) => fn(store.state, meta));
 
 export function commit(mutate, { undoable = false, silent = false } = {}) {
   const before = undoable ? structuredClone(store.state) : null;
@@ -135,10 +143,38 @@ export function commit(mutate, { undoable = false, silent = false } = {}) {
 
 export function undo() {
   if (!lastUndo) return;
-  store.state = lastUndo;
+  store.state = restoreAsNewest(lastUndo, store.state);
   lastUndo = null;
   persist();
   emit();
+}
+
+// Dipakai sinkron saat menerima data dari server. Tidak memicu sinkron balik.
+export function replaceState(next) {
+  store.state = normalize(next);
+  lastUndo = null;
+  persist();
+  emit({ remote: true });
+}
+
+export async function kvGet(key) {
+  if (!db) return null;
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE).objectStore(STORE).get(key);
+    req.onsuccess = () => resolve(req.result ?? null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function kvSet(key, value) {
+  if (!db) return;
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
 }
 
 function writePhoto(run) {
@@ -182,6 +218,7 @@ export function toggleTask(taskId, date) {
     (s) => {
       const t = s.tasks.find((x) => x.id === taskId);
       if (!t) return;
+      t.updatedAt = Date.now();
       if (t.repeat) {
         t.completions ??= {};
         if (t.completions[date]) delete t.completions[date];
@@ -199,6 +236,7 @@ export function skipOccurrence(taskId, date) {
     (s) => {
       const t = s.tasks.find((x) => x.id === taskId);
       if (!t) return;
+      t.updatedAt = Date.now();
       t.skips ??= {};
       t.skips[date] = true;
     },
@@ -207,11 +245,17 @@ export function skipOccurrence(taskId, date) {
 }
 
 export function removeTask(taskId) {
-  commit((s) => { s.tasks = s.tasks.filter((t) => t.id !== taskId); }, { undoable: true });
+  commit((s) => {
+    s.tasks = s.tasks.filter((t) => t.id !== taskId);
+    s.deleted[taskId] = Date.now();
+  }, { undoable: true });
 }
 
 export function clearCompleted() {
-  commit((s) => { s.tasks = s.tasks.filter((t) => t.repeat || !t.doneAt); }, { undoable: true });
+  commit((s) => {
+    for (const t of s.tasks) if (!t.repeat && t.doneAt) s.deleted[t.id] = Date.now();
+    s.tasks = s.tasks.filter((t) => t.repeat || !t.doneAt);
+  }, { undoable: true });
 }
 
 export function ensureList(name) {
@@ -223,6 +267,7 @@ export function ensureList(name) {
     s.lists.push({
       id,
       name: clean,
+      updatedAt: Date.now(),
       emoji: LIST_EMOJI[s.lists.length % LIST_EMOJI.length],
       color: LIST_COLORS[s.lists.length % LIST_COLORS.length],
     });
@@ -234,7 +279,13 @@ export function removeList(listId) {
   commit(
     (s) => {
       s.lists = s.lists.filter((l) => l.id !== listId);
-      for (const t of s.tasks) if (t.listId === listId) t.listId = null;
+      s.deleted[listId] = Date.now();
+      for (const t of s.tasks) {
+        if (t.listId === listId) {
+          t.listId = null;
+          t.updatedAt = Date.now();
+        }
+      }
     },
     { undoable: true },
   );
@@ -248,11 +299,15 @@ export function cyclePrayer(date, key) {
     const next = STATUS_ORDER[(STATUS_ORDER.indexOf(day[key]) + 1) % STATUS_ORDER.length];
     if (next) day[key] = next;
     else delete day[key];
+    s.prayerStamp[`${date}|${key}`] = Date.now();
   });
 }
 
 export function updateSettings(patch) {
-  commit((s) => { Object.assign(s.settings, patch); });
+  commit((s) => {
+    Object.assign(s.settings, patch);
+    s.settingsAt = Date.now();
+  });
 }
 
 // Pencadangan
@@ -270,11 +325,15 @@ export function restoreBackup(text) {
   if (data?.app !== 'istiqomah' || !Array.isArray(data.tasks)) {
     throw new Error('Berkas ini bukan cadangan Istiqomah.');
   }
-  const { exportedAt, ...rest } = data;
-  commit(() => { store.state = normalize(rest); }, { undoable: true });
+  const { exportedAt, ownerId, ...rest } = data;
+  commit(() => {
+    store.state = restoreAsNewest({ ...normalize(rest), ownerId: store.state.ownerId }, store.state);
+  }, { undoable: true });
   return store.state.tasks.length;
 }
 
 export function resetAll() {
-  commit(() => { store.state = defaultState(); }, { undoable: true });
+  commit(() => {
+    store.state = restoreAsNewest({ ...defaultState(), ownerId: store.state.ownerId }, store.state);
+  }, { undoable: true });
 }

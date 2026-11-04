@@ -10,6 +10,7 @@ import { repeatLabel } from '../repeat.js';
 import { clock, relativeDay, ymd } from '../date.js';
 import { PRAYERS, PRAYER_NAMES } from '../prayer.js';
 import { dayTasks } from '../agenda.js';
+import { eventTimeLabel } from '../gcal.js';
 
 export const listLabel = (list) => `${list.emoji ?? '📌'} ${list.name}`;
 
@@ -101,6 +102,21 @@ export function prayerButton(date, key) {
     },
   },
     h('span', { class: 'pill' }, status === 'done' ? icon('centang', 14) : null, label),
+  );
+}
+
+// Acara dari Google Calendar. Cuma bisa dibaca di sini, jadi ketukan membukanya di Google.
+export function eventRow(entry, opts = {}) {
+  const e = entry.event;
+  const label = eventTimeLabel(entry, clock);
+  return h(opts.tag ?? 'li', { class: 'event-row' },
+    h('a', { href: e.link ?? 'https://calendar.google.com', target: '_blank', rel: 'noopener', class: 'event-link', style: e.color ? { '--event': e.color } : null },
+      h('span', { class: 'task-title' }, e.title),
+      h('span', { class: 'task-meta' },
+        h('span', null, `📅 ${e.calendar}`),
+        opts.showTime ? h('span', null, label) : (entry.minute != null ? h('span', null, label) : null),
+      ),
+    ),
   );
 }
 

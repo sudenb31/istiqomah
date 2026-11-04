@@ -1,7 +1,9 @@
 // Kalender bulanan dengan tanggal Hijriah kecil dan agenda hari yang dipilih.
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { taskRow, emptyNote } from './rows.js';
+import { taskRow, eventRow, emptyNote } from './rows.js';
+import { cloud } from '../cloud.js';
+import { eventsOnDate } from '../gcal.js';
 import { openNewTask } from './sheet.js';
 import { store } from '../store.js';
 import { dayTasks, timesFor } from '../agenda.js';
@@ -34,7 +36,8 @@ function dayCell(root, date, today, inMonth) {
   const adj = state.settings.hijriAdjust;
   const dayNum = Number(date.slice(8));
   const shown = open.slice().sort((a, b) => (b.task.priority ?? 0) - (a.task.priority ?? 0)).slice(0, 3);
-  const label = `${longDate(date)}, ${open.length ? `${open.length} tugas` : 'tidak ada tugas'}`;
+  const external = eventsOnDate(cloud.events, date);
+  const label = `${longDate(date)}, ${open.length ? `${open.length} tugas` : 'tidak ada tugas'}${external.length ? `, ${external.length} acara Google` : ''}`;
   return h('button', {
     type: 'button',
     class: `day${inMonth ? '' : ' out'}${date === today ? ' is-today' : ''}${date === view.selected ? ' is-selected' : ''}`,
@@ -49,6 +52,7 @@ function dayCell(root, date, today, inMonth) {
     h('span', { class: 'day-hijri' }, hijri(date, adj).day),
     h('span', { class: 'day-dots' },
       shown.map((e) => h('i', { 'data-priority': e.task.priority ?? 0 })),
+      external.slice(0, 2).map(() => h('i', { 'data-kind': 'google' })),
     ),
   );
 }
@@ -82,6 +86,8 @@ export function renderCalendar(root) {
 
   const entries = dayTasks(store.state, view.selected)
     .sort((a, b) => a.done - b.done || (a.minute ?? 9999) - (b.minute ?? 9999));
+  const googleEntries = eventsOnDate(cloud.events, view.selected)
+    .sort((a, b) => (a.minute ?? -1) - (b.minute ?? -1));
 
   root.replaceChildren(
     h('div', { class: 'page page-top' },
@@ -120,8 +126,11 @@ export function renderCalendar(root) {
           }, icon('plus', 16), 'Tambah'),
         ),
         prayerStrip(view.selected),
-        entries.length
-          ? h('ul', { class: 'task-list' }, entries.map((e) => taskRow(e, { today, showTime: true, showClock: true })))
+        entries.length || googleEntries.length
+          ? h('ul', { class: 'task-list' },
+              googleEntries.map((e) => eventRow(e, { showTime: true })),
+              entries.map((e) => taskRow(e, { today, showTime: true, showClock: true })),
+            )
           : emptyNote('Kosong. Mau isi sesuatu di tanggal ini?'),
       ),
     ),

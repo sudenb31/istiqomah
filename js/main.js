@@ -11,6 +11,7 @@ import { renderIbadah } from './ui/ibadah.js';
 import { renderSettings } from './ui/settings.js';
 import { loadStore, store } from './store.js';
 import { checkReminders, updateBadge } from './reminders.js';
+import { initCloud, onCloudChange } from './cloud.js';
 import { ymd } from './date.js';
 
 const VIEWS = {
@@ -147,6 +148,14 @@ async function boot() {
   setInterval(tick, 15000);
   tick();
   registerServiceWorker();
+
+  await initCloud();
+  // Status akun berubah di latar belakang. Halaman yang sedang diketik tidak digambar ulang.
+  onCloudChange(() => {
+    const typing = document.activeElement?.matches?.('input, textarea, select');
+    if (!typing && !document.getElementById('sheet').open) render();
+  });
+  render();
 }
 
 boot();

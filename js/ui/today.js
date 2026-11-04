@@ -1,7 +1,9 @@
 // Halaman utama: kartu besar sholat berikutnya, lalu garis waktu hari ini.
 import { h } from './dom.js';
 import { icon } from './icons.js';
-import { taskRow, taskBody, taskCheck, prayerButton, emptyNote } from './rows.js';
+import { taskRow, taskBody, taskCheck, prayerButton, eventRow, emptyNote } from './rows.js';
+import { cloud } from '../cloud.js';
+import { eventsOnDate } from '../gcal.js';
 import { openGaya } from './gaya.js';
 import { store } from '../store.js';
 import { dayAgenda, overdueTasks, prayerStreak, timesFor } from '../agenda.js';
@@ -117,6 +119,13 @@ function timelineRow(entry, i, ctx) {
       h('span', { class: 'tl-body' }, entry.name),
     );
   }
+  if (entry.type === 'event') {
+    return h('li', { class: 'tl-row tl-event', style },
+      h('span', { class: 'tl-time' }, clock(entry.minute)),
+      h('span', { class: 'tl-rib' }),
+      eventRow(entry, { tag: 'div' }),
+    );
+  }
   return h('li', { class: `tl-row tl-task${entry.done ? ' is-done' : ''}`, style },
     h('span', { class: 'tl-time' }, clock(entry.minute)),
     h('span', { class: 'tl-rib' }),
@@ -129,7 +138,7 @@ export function renderToday(root) {
   const today = ymd(now);
   const minute = nowMinutes(now);
   const state = store.state;
-  const { times, untimed, timeline } = dayAgenda(state, today);
+  const { times, untimed, timeline, allDayEvents } = dayAgenda(state, today, eventsOnDate(cloud.events, today));
   const stops = times ? skyStops(times) : null;
   const overdue = overdueTasks(state, today);
   const entries = [...untimed, ...timeline.filter((e) => e.type === 'task')];
@@ -157,10 +166,13 @@ export function renderToday(root) {
             ),
           )
         : null,
-      untimed.length
+      untimed.length || allDayEvents.length
         ? h('section', { class: 'panel' },
             h('h2', { class: 'block-title' }, '✨ Kapan aja hari ini'),
-            h('ul', { class: 'task-list' }, untimed.map((e) => taskRow(e, { today }))),
+            h('ul', { class: 'task-list' },
+              allDayEvents.map((e) => eventRow(e)),
+              untimed.map((e) => taskRow(e, { today })),
+            ),
           )
         : null,
       h('section', { class: 'panel', 'aria-label': 'Garis waktu hari ini' },

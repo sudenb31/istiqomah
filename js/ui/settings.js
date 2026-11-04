@@ -3,6 +3,8 @@ import { h } from './dom.js';
 import { icon } from './icons.js';
 import { toast } from './toast.js';
 import { openGaya } from './gaya.js';
+import { accountSection } from './akun.js';
+import { cloud } from '../cloud.js';
 import { store, updateSettings, backupText, restoreBackup, resetAll, undo, deletePhoto } from '../store.js';
 import { CITIES, METHODS, PRAYERS, PRAYER_NAMES } from '../prayer.js';
 import { buildIcs } from '../ics.js';
@@ -170,7 +172,9 @@ function notifyStatus(rerender) {
 function reminderSection(s, rerender) {
   return section('Pengingat',
     notifyStatus(rerender),
-    h('p', { class: 'notice' }, 'Saat ini pengingat hanya berbunyi ketika aplikasi sedang terbuka. Supaya tetap berbunyi saat aplikasi tertutup, kirim jadwal ke kalender perangkat di bagian bawah.'),
+    cloud.google.connected
+      ? h('p', { class: 'notice' }, 'Google Calendar tersambung, jadi pengingat tetap berbunyi lewat Google walau aplikasi tertutup. Pastikan notifikasi Google Calendar di HP aktif.')
+      : h('p', { class: 'notice' }, 'Saat ini pengingat hanya berbunyi ketika aplikasi sedang terbuka. Supaya tetap berbunyi saat aplikasi tertutup, sambungkan Google Calendar atau kirim jadwal ke kalender perangkat di bagian bawah.'),
     h('fieldset', { class: 'group' },
       h('legend', null, 'Ingatkan waktu sholat'),
       h('div', { class: 'chips' },
@@ -245,7 +249,9 @@ function dataSection(rerender) {
     },
   });
   return section('Data',
-    h('p', { class: 'hint' }, 'Semua data hanya tersimpan di perangkat ini dan tidak dikirim ke mana pun. Simpan cadangan secara berkala supaya tidak hilang kalau ganti HP.'),
+    h('p', { class: 'hint' }, cloud.session
+      ? 'Data tersimpan di perangkat ini dan di server pribadi kamu. Cadangan tetap berguna sebagai salinan tambahan.'
+      : 'Semua data hanya tersimpan di perangkat ini dan tidak dikirim ke mana pun. Simpan cadangan secara berkala supaya tidak hilang kalau ganti HP.'),
     h('div', { class: 'row-actions' },
       h('button', {
         type: 'button',
@@ -304,6 +310,7 @@ export function renderSettings(root) {
       h('div', { class: 'panel' }, h('h1', { class: 'view-title' }, 'Pengaturan ⚙️')),
       store.storageFailed ? h('p', { class: 'notice' }, 'Penyimpanan browser tidak tersedia, jadi perubahan hilang saat aplikasi ditutup. Keluar dari mode privat lalu buka lagi.') : null,
       installSection(),
+      accountSection(rerender),
       appearanceSection(s),
       locationSection(s, rerender),
       methodSection(s),

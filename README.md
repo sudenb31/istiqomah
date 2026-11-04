@@ -35,7 +35,8 @@ Unggah `index.html`, `manifest.webmanifest`, `sw.js`, `css/`, `js/`, dan `icons/
 
 - **Pengingat saat aplikasi tertutup:** iPhone tidak mengizinkan web app menjadwalkan notifikasi sendiri. Tanpa server push, pengingat hanya berbunyi saat aplikasi terbuka. Jalan keluarnya saat ini adalah ekspor `.ics` ke kalender perangkat.
 - **Widget layar utama:** PWA tidak bisa memasang widget iOS.
-- **Sinkron antarperangkat:** belum ada. Pindah data lewat Simpan cadangan dan Pulihkan cadangan di Pengaturan.
+- **Akun, sinkron, dan Google Calendar:** kodenya sudah ada, tapi baru aktif setelah `js/config.js` diisi. Langkahnya ada di [SETUP.md](SETUP.md).
+- **Arah sambungan Google:** acara Google tampil di aplikasi tapi hanya bisa diubah di Google. Tugas dikirim ke kalender Istiqomah untuk 45 hari ke depan, dan perubahan langsung di kalender itu akan tertimpa saat sinkron berikutnya.
 - **Jadwal sholat:** selisih terhadap data Kemenag paling banyak 1 menit pada data uji. Lokasi GPS di luar radius 40 km dari kota di daftar tidak memakai koreksi ketinggian.
 
 ## Struktur
@@ -48,4 +49,9 @@ Unggah `index.html`, `manifest.webmanifest`, `sw.js`, `css/`, `js/`, dan `icons/
 - `js/sky.js` warna langit
 - `js/store.js` penyimpanan IndexedDB
 - `js/reminders.js` pengingat di dalam aplikasi dan badge ikon
+- `js/merge.js` penggabungan data antar perangkat
+- `js/gcal.js` penyusunan acara Google Calendar
+- `js/cloud.js` login kode email, sinkron, dan sambungan Google
 - `js/ui/` tampilan
+- `supabase/` skema database dan fungsi server
+- `tools/mock-cloud.mjs` server tiruan untuk menguji alur tanpa akun asli
