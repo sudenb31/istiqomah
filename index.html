@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Istiqomah</title>
+  <meta name="description" content="Daftar tugas harian dengan kalender, pengingat, dan jadwal sholat.">
+  <meta name="theme-color" content="#2F2A6B">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Istiqomah">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+  <link rel="apple-touch-icon" href="./icons/icon-180.png">
+  <link rel="stylesheet" href="./css/app.css">
+  <script>
+    try {
+      var savedBg = localStorage.getItem('istiqomah-bg');
+      if (savedBg) document.documentElement.style.setProperty('--bg', savedBg);
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div id="backdrop" aria-hidden="true"></div>
+  <main id="main"></main>
+  <nav id="nav" aria-label="Menu utama"></nav>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="sheet" class="sheet-dialog" aria-label="Tugas"></dialog>
+  <dialog id="gaya" class="sheet-dialog" aria-label="Ganti tema dan background"></dialog>
+  <noscript><p>Aplikasi ini butuh JavaScript supaya bisa berjalan.</p></noscript>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

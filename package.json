@@ -1,0 +1,13 @@
+{
+  "name": "istiqomah",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Aplikasi to-do harian dengan kalender, pengingat, dan jadwal sholat. PWA tanpa build step.",
+  "scripts": {
+    "dev": "node tools/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "stamp": "node tools/stamp-sw.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}
